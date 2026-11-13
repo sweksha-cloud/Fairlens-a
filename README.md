@@ -2,6 +2,8 @@
 
 **Check a dataset for bias before you train a model on it.**
 
+**Try it: [fairlens-a.vercel.app](https://fairlens-a.vercel.app)** (no sign-up; nothing you upload is stored)
+
 Upload a CSV, tell FairLens which column is the outcome (for example *approved* or *hired*) and which
 columns describe people (race, sex, age group…), and it reports, in plain English:
 

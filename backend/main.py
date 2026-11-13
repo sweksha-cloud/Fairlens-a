@@ -501,7 +501,6 @@ def unsupervised_analytics(
 
 
 import os
-import matplotlib.pyplot as plt
 
 
 def generate_bias_plots(
@@ -521,6 +520,9 @@ def generate_bias_plots(
 
     Returns a dict with file paths for each generated plot.
     """
+    # Imported here, not at module level, so the web API (deployed without matplotlib)
+    # can import this module.
+    import matplotlib.pyplot as plt
     import numpy as np
 
     os.makedirs(output_dir, exist_ok=True)
