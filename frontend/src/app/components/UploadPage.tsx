@@ -36,8 +36,8 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
       .then((p) => {
         if (cancelled) return;
         setPreview(p);
-        setTargetColumn('');
-        setSensitive([]);
+        setTargetColumn(p.suggestedTarget);
+        setSensitive(p.suggestedSensitive);
         setNumerical(p.suggestedNumeric);
         setShowAll(false);
       })
@@ -55,6 +55,18 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
     }
     setError(null);
     setFile(f);
+  };
+
+  const loadSample = async () => {
+    setError(null);
+    try {
+      const res = await fetch('/sample-loans.csv');
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      setFile(new File([blob], 'sample-loans.csv', { type: 'text/csv' }));
+    } catch {
+      setError('Could not load the sample dataset.');
+    }
   };
 
   const toggle = (list: string[], set: (v: string[]) => void, col: string) =>
@@ -100,10 +112,15 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
       <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(60,230,221,0.2)]">
         <div className="border-b border-[#E3E3E3] px-6 py-5 sm:px-8">
           <p className="font-ui text-xl font-semibold text-black sm:text-2xl">Analyze a dataset</p>
+          <p className="mt-1 font-ui text-sm text-black/60">
+            Check whether your data treats groups of people fairly <em>before</em> you train a model on it.
+            Your file is only sent to the FairLens API for analysis.
+          </p>
         </div>
 
         {/* Step 1 — file */}
         <div className="px-6 py-8 sm:px-8 sm:py-10">
+          <p className="mb-3 font-ui font-semibold text-black">1. Choose a CSV file</p>
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -152,14 +169,26 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
               className="hidden"
             />
           </div>
+          {!file && (
+            <p className="mt-3 text-center font-ui text-sm text-black/60">
+              No dataset handy?{' '}
+              <button type="button" onClick={loadSample} className="font-semibold text-[#37B1E6] hover:underline">
+                Try a sample loan-approval dataset
+              </button>
+            </p>
+          )}
 
           {/* Step 2 — columns */}
           {preview && (
             <div className="mt-8 space-y-6">
               <div>
-                <label className="mb-2 block font-ui font-semibold text-black">
-                  Target / outcome column <span className="text-[#EF4444]">*</span>
+                <label className="mb-1 block font-ui font-semibold text-black">
+                  2. What outcome are you predicting? <span className="text-[#EF4444]">*</span>
                 </label>
+                <p className="mb-2 font-ui text-sm text-black/60">
+                  The column your model would learn to predict, e.g. <em>approved</em>, <em>hired</em> or{' '}
+                  <em>reoffended</em>.{preview.suggestedTarget && targetColumn === preview.suggestedTarget && ' We picked a likely one; change it if needed.'}
+                </p>
                 <select
                   value={targetColumn}
                   onChange={(e) => setTargetColumn(e.target.value)}
@@ -173,10 +202,13 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
               </div>
 
               <fieldset>
-                <legend className="mb-2 font-ui font-semibold text-black">
-                  Sensitive attributes{' '}
-                  <span className="font-normal text-black/50">(race, gender, age…)</span>
+                <legend className="mb-1 font-ui font-semibold text-black">
+                  3. Which columns describe who people are?
                 </legend>
+                <p className="mb-2 font-ui text-sm text-black/60">
+                  Groups that shouldn't affect the outcome, like race, sex or age group. FairLens checks whether
+                  each group is fairly represented and whether outcomes differ between groups.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {sensitiveOptions.map((c) => (
                     <button
@@ -201,10 +233,13 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
               </fieldset>
 
               <fieldset>
-                <legend className="mb-2 font-ui font-semibold text-black">
-                  Numerical features{' '}
-                  <span className="font-normal text-black/50">(checked for skew)</span>
+                <legend className="mb-1 font-ui font-semibold text-black">
+                  4. Numeric columns to check <span className="font-normal text-black/50">(optional)</span>
                 </legend>
+                <p className="mb-2 font-ui text-sm text-black/60">
+                  Checked for lopsided distributions (a few extreme values), which can make a model behave
+                  badly. Leave them all off to skip this check.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {numericOptions.map((c) => (
                     <button

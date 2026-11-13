@@ -37,8 +37,26 @@ export type CsvPreview = {
   suggestedNumeric: string[];
   /** Low-cardinality categorical columns — the sensible sensitive-attribute candidates. */
   categoricalColumns: string[];
+  /** Best guess at the outcome column (yes/no style, outcome-like name), or '' if none. */
+  suggestedTarget: string;
+  /** Columns whose names look like personal characteristics (race, sex, age group…). */
+  suggestedSensitive: string[];
   rowCount: number;
 };
+
+/** Column name looks like a protected / personal characteristic. */
+function looksSensitive(name: string): boolean {
+  return /(race|ethnic|sex|gender|age_?(cat|group|band|bracket)|religion|disab|marital|nationality|citizen|native|veteran)/i.test(
+    name,
+  );
+}
+
+/** Column name looks like an outcome / label. */
+function looksLikeOutcome(name: string): boolean {
+  return /(target|label|outcome|class|approved|approval|accepted|hired|admit|default|recid|churn|fraud|result|decision|y$|^y_)/i.test(
+    name,
+  );
+}
 
 /** Column name looks like an identifier, key, or boolean flag — not a measurement. */
 function looksLikeId(name: string): boolean {
@@ -65,13 +83,18 @@ export async function previewCsv(file: File): Promise<CsvPreview> {
 
   const suggestedNumeric: string[] = [];
   const categoricalColumns: string[] = [];
+  const outcomeCandidates: { name: string; distinct: number }[] = [];
 
   columns.forEach((name, idx) => {
     const vals = sample.map((r) => r[idx]).filter((v) => v !== undefined && v !== '');
     if (vals.length === 0) return;
 
     const isNumeric = vals.every((v) => Number.isFinite(Number(v)));
-    const uniqueRatio = new Set(vals).size / vals.length;
+    const distinct = new Set(vals).size;
+    const uniqueRatio = distinct / vals.length;
+    if (distinct >= 2 && distinct <= 5 && looksLikeOutcome(name) && !looksSensitive(name)) {
+      outcomeCandidates.push({ name, distinct });
+    }
 
     if (isNumeric) {
       // A measurement, not an identifier: not ID-named and not near-unique.
@@ -82,7 +105,19 @@ export async function previewCsv(file: File): Promise<CsvPreview> {
     }
   });
 
-  return { columns, suggestedNumeric, categoricalColumns, rowCount: lines.length - 1 };
+  // Prefer yes/no columns, then the right-most match (outcomes are usually last).
+  outcomeCandidates.sort((a, b) => a.distinct - b.distinct || columns.indexOf(b.name) - columns.indexOf(a.name));
+  const suggestedTarget = outcomeCandidates[0]?.name ?? '';
+  const suggestedSensitive = categoricalColumns.filter((c) => looksSensitive(c) && c !== suggestedTarget);
+
+  return {
+    columns,
+    suggestedNumeric: suggestedNumeric.filter((c) => c !== suggestedTarget),
+    categoricalColumns,
+    suggestedTarget,
+    suggestedSensitive,
+    rowCount: lines.length - 1,
+  };
 }
 
 export type AnalyzeParams = {
@@ -102,10 +137,9 @@ export async function analyzeDataset(file: File, params: AnalyzeParams): Promise
   const form = new FormData();
   form.append('file', file);
   form.append('target_column', params.targetColumn);
-  if (params.sensitiveAttributes.length)
-    form.append('sensitive_attributes', params.sensitiveAttributes.join(','));
-  if (params.numericalFeatures.length)
-    form.append('numerical_features', params.numericalFeatures.join(','));
+  // A lone ',' tells the API "none selected" (an empty value would mean "choose automatically").
+  form.append('sensitive_attributes', params.sensitiveAttributes.join(',') || ',');
+  form.append('numerical_features', params.numericalFeatures.join(',') || ',');
 
   let res: Response;
   try {

@@ -29,6 +29,66 @@ const formatPValue = (pValue: number) => {
   return `p = ${pValue.toFixed(4)}`;
 };
 
+/** Pick the outcome value to talk about: the "positive" one if recognisable, else the rarest. */
+const focusOutcome = (rates: { [group: string]: { [outcome: string]: number } }) => {
+  const outcomes = [...new Set(Object.values(rates).flatMap((r) => Object.keys(r)))];
+  const positive = outcomes.find((o) => /^(1|1\.0|yes|true|y|approved|hired|positive)$/i.test(o));
+  return positive ?? outcomes[outcomes.length - 1];
+};
+
+const pct = (x: number) => `${(x * 100).toFixed(x < 0.01 ? 1 : 0)}%`;
+
+type Finding = { tone: 'bad' | 'warn' | 'info'; title: string; meaning: string; action: string };
+
+function buildFindings(result: AnalysisResult): Finding[] {
+  const out: Finding[] = [];
+  for (const [attr, d] of Object.entries(result.correlation_bias)) {
+    if (!d.is_correlated || !d.outcome_rates) continue;
+    const outcome = focusOutcome(d.outcome_rates);
+    const sorted = Object.entries(d.outcome_rates)
+      .map(([g, r]) => [g, r[outcome] ?? 0] as const)
+      .sort((a, b) => b[1] - a[1]);
+    const [hi, lo] = [sorted[0], sorted[sorted.length - 1]];
+    out.push({
+      tone: 'bad',
+      title: `Outcomes differ by ${attr.replace(/_/g, ' ')}`,
+      meaning: `The share with outcome "${outcome}" ranges from ${pct(lo[1])} (${lo[0]}) to ${pct(hi[1])} (${hi[0]}). A model trained on this data is likely to learn and repeat that gap.`,
+      action: `Check whether the gap has a legitimate cause. If not, consider reweighting or resampling, and measure your model's results per ${attr.replace(/_/g, ' ')} group.`,
+    });
+  }
+  for (const [attr, d] of Object.entries(result.representation_bias)) {
+    const small = Object.entries(d.underrepresented_groups ?? {});
+    if (!small.length) continue;
+    out.push({
+      tone: 'warn',
+      title: `Some ${attr.replace(/_/g, ' ')} groups are rare`,
+      meaning: `${small.map(([g, v]) => `${g} (${pct(v)})`).join(', ')} each make up under 10% of rows, so a model will see few examples of them and may perform worse for them.`,
+      action: 'Collect more data for these groups if you can, and report model accuracy separately for them.',
+    });
+  }
+  const ci = result.class_imbalance;
+  if (ci && ci.imbalance_ratio > 3) {
+    out.push({
+      tone: 'warn',
+      title: 'The outcome is lopsided',
+      meaning: `The most common outcome is ${ci.imbalance_ratio.toFixed(1)}× as frequent as the rarest, so a model can look accurate by mostly predicting the common one.`,
+      action: 'Use metrics like precision/recall per class instead of plain accuracy, or rebalance the classes.',
+    });
+  }
+  const skewed = Object.entries(result.skewness_analysis).filter(([, d]) => d.interpretation.includes('highly'));
+  if (skewed.length) {
+    out.push({
+      tone: 'info',
+      title: 'Some numeric columns have extreme values',
+      meaning: `${skewed.map(([f]) => f).join(', ')} ${skewed.length === 1 ? 'is' : 'are'} highly skewed: most values are small with a long tail of large ones. This is a data-quality note rather than unfairness by itself.`,
+      action: 'Consider a log transform or capping extreme values before training.',
+    });
+  }
+  return out;
+}
+
+const TONE = { bad: '#EF4444', warn: '#F59E0B', info: '#37B1E6' };
+
 const COLORS = ['#3CE6DD', '#37B1E6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#F97316', '#06B6D4'];
 
 const CARD = 'rounded-2xl bg-white p-6 shadow-[0_8px_32px_rgba(60,230,221,0.2)] sm:p-10';
@@ -38,6 +98,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
   const severityColor = getSeverityColor(result.summary.bias_severity);
   const classCounts = result.class_imbalance?.class_counts ?? {};
   const hasClassImbalance = Object.keys(classCounts).length > 0;
+  const findings = buildFindings(result);
   const totalRows =
     result.totalRows || Object.values(classCounts).reduce((a, b) => a + b, 0);
 
@@ -84,12 +145,50 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
         </div>
       </div>
 
+      {/* Plain-English summary */}
+      <div className={`${CARD} mb-10`}>
+        <h2 className={CARD_H2}>
+          <BarChart3 className="size-8 shrink-0 text-[#3CE6DD]" />
+          What this means
+        </h2>
+        {(result.notes ?? []).map((n) => (
+          <p key={n} className="mb-4 rounded-lg border-l-4 border-[#37B1E6] bg-[#37B1E6]/10 p-3 font-ui text-sm text-black/80">
+            {n}
+          </p>
+        ))}
+        {findings.length === 0 ? (
+          <p className="font-ui text-black/80 sm:text-lg">
+            None of FairLens's checks found a problem. Groups are reasonably represented and outcomes don't differ
+            meaningfully between them. That's a good sign, but it doesn't prove the data is fair; it only covers
+            the columns you selected.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {findings.map((f) => (
+              <div key={f.title} className="border-l-4 py-1 pl-5" style={{ borderColor: TONE[f.tone] }}>
+                <p className="font-ui text-lg font-semibold" style={{ color: TONE[f.tone] }}>{f.title}</p>
+                <p className="mt-1 font-ui text-black/80">{f.meaning}</p>
+                <p className="mt-1 font-ui text-sm text-black/60"><strong>What you can do:</strong> {f.action}</p>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-6 font-ui text-xs text-black/50">
+          Severity: <strong>high</strong> if outcomes differ strongly by group (or by two or more attributes),{' '}
+          <strong>moderate</strong> for an outcome gap or rare groups, <strong>low</strong> for data-quality notes only.
+          These are statistical warning signs in the data, not proof of discrimination.
+        </p>
+      </div>
+
       {/* Detected issues */}
       <div className={`${CARD} mb-10`}>
         <h2 className={CARD_H2}>
           <AlertTriangle className="size-8 shrink-0 text-[#EF4444]" />
           Detected Issues
         </h2>
+        {result.detected_issues.length === 0 && (
+          <p className="font-ui text-black/70">No issues detected.</p>
+        )}
         <div className="space-y-4">
           {result.detected_issues.map((issue, index) => {
             const issueType = issue.split(':')[0];
@@ -122,8 +221,9 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
             Skewness Analysis
           </h2>
           <p className="mb-6 font-ui text-sm text-black/70 sm:text-base">
-            Skewness measures the asymmetry of the distribution. Values between -0.5 and 0.5 are
-            considered fairly symmetric.
+            How lopsided each numeric column is. Near 0 means values are spread evenly around the
+            middle; above 1 (or below -1) means a long tail of extreme values. Between -0.5 and 0.5 is
+            fairly symmetric.
           </p>
           <div className="grid gap-6">
             {Object.entries(result.skewness_analysis).map(([feature, data]) => (
@@ -195,8 +295,8 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
             </span>
           </div>
           <p className="font-ui text-xs text-black/60 sm:text-sm">
-            The ratio between the largest and smallest class. Values {'>'} 3 indicate significant
-            imbalance.
+            How many times more common the most frequent outcome is than the rarest. Above 3 means
+            a model may mostly learn the common outcome.
           </p>
         </div>
 
@@ -258,6 +358,11 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
             <BarChart3 className="size-8 shrink-0 text-[#3CE6DD]" />
             Representation Bias Analysis
           </h2>
+          <p className="mb-8 font-ui text-sm text-black/70 sm:text-base">
+            How many rows each group has. Groups under 10% are shown in red: a model sees few examples of
+            them, so it tends to be less accurate for them. The ratio compares the largest group to the
+            smallest.
+          </p>
 
           {Object.entries(result.representation_bias).map(([attribute, data], attrIndex) => (
             <div key={attribute} className={attrIndex > 0 ? 'mt-12' : ''}>
@@ -353,8 +458,10 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
             Correlation Bias (Chi-Square Test)
           </h2>
           <p className="mb-8 font-ui text-sm text-black/70 sm:text-base">
-            Tests whether sensitive attributes are significantly correlated with the target variable.
-            P-values {'<'} 0.05 indicate significant correlation, which may lead to biased predictions.
+            Whether the outcome rate differs between groups. A difference is flagged when it is
+            statistically significant (p {'<'} 0.05) <em>and</em> large enough to matter: a gap of 10+
+            percentage points between groups with at least 30 rows, or an association strength
+            (Cramér's V, 0 = none to 1 = total) of 0.1 or more.
           </p>
 
           <div className="space-y-6">
@@ -372,7 +479,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
                     className="rounded-full px-4 py-2 text-sm text-white"
                     style={{ backgroundColor: data.is_correlated ? '#EF4444' : '#10B981' }}
                   >
-                    {data.is_correlated ? 'CORRELATED' : 'NOT CORRELATED'}
+                    {data.is_correlated ? 'OUTCOMES DIFFER' : 'NO MEANINGFUL DIFFERENCE'}
                   </span>
                 </div>
 
@@ -394,6 +501,41 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
                   </div>
                 </div>
 
+                {data.cramers_v !== undefined && (
+                  <p className="mt-4 font-ui text-sm text-black/70">
+                    Association strength: <strong className="capitalize">{data.strength}</strong> (Cramér's V ={' '}
+                    {data.cramers_v.toFixed(2)})
+                    {data.statistically_significant && !data.is_correlated &&
+                      ' — statistically significant but too small to flag.'}
+                  </p>
+                )}
+                {data.outcome_rates && (() => {
+                  const outcome = focusOutcome(data.outcome_rates);
+                  return (
+                    <div className="mt-4 space-y-2">
+                      <p className="font-ui text-sm font-semibold text-black">Share with outcome "{outcome}" by group</p>
+                      {Object.entries(data.outcome_rates)
+                        .map(([g, r]) => [g, r[outcome] ?? 0] as const)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([g, rate], i) => (
+                          <div key={g}>
+                            <div className="mb-1 flex justify-between font-ui text-sm">
+                              <span className="text-black">{g}</span>
+                              <span className="font-semibold text-black/80">{pct(rate)}</span>
+                            </div>
+                            <div className="h-2.5 overflow-hidden rounded-full bg-[#E3E3E3]">
+                              <div className="h-full rounded-full" style={{ width: `${rate * 100}%`, backgroundColor: COLORS[i % COLORS.length] }} />
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  );
+                })()}
+                {data.low_expected_counts && (
+                  <p className="mt-3 font-ui text-xs text-black/60">
+                    Some groups are small, so this test is less reliable for {attribute.replace(/_/g, ' ')}.
+                  </p>
+                )}
                 {data.is_correlated && (
                   <div className="mt-4 rounded-lg border-l-4 border-[#EF4444] bg-white p-4">
                     <p className="font-ui text-sm text-black/80">

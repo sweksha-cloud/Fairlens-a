@@ -101,3 +101,54 @@ def test_analyze_csv_rejects_non_csv():
         files={"file": ("bad.csv", b"\xff\xfe\x00not-utf8", "text/csv")},
     )
     assert response.status_code == 400
+
+
+def _report(data, **params):
+    response = client.post(
+        "/analyze-bias-csv",
+        files={"file": ("d.csv", _csv_bytes(data), "text/csv")},
+        data=params,
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["bias_report"]
+
+
+def test_outcome_gap_between_groups_is_flagged_with_rates():
+    # Group A approved 80%, group B approved 40%: a 40-point gap.
+    data = {
+        "group": ["A"] * 100 + ["B"] * 100,
+        "approved": [1] * 80 + [0] * 20 + [1] * 40 + [0] * 60,
+    }
+    report = _report(data, target_column="approved", sensitive_attributes="group", numerical_features=",")
+    corr = report["correlation_bias"]["group"]
+    assert corr["is_correlated"] is True
+    assert corr["outcome_rates"]["A"]["1"] == pytest.approx(0.8)
+    assert corr["outcome_rates"]["B"]["1"] == pytest.approx(0.4)
+    assert corr["max_rate_gap"] == pytest.approx(0.4)
+    assert 0 < corr["cramers_v"] <= 1
+
+
+def test_no_gap_is_not_flagged():
+    data = {"group": ["A", "B"] * 100, "approved": [1, 1, 0, 0] * 50}
+    report = _report(data, target_column="approved", sensitive_attributes="group", numerical_features=",")
+    assert report["correlation_bias"]["group"]["is_correlated"] is False
+    assert report["summary"]["bias_severity"] == "none detected"
+
+
+def test_empty_numeric_selection_skips_skew_and_names_small_groups():
+    data = {
+        "id": list(range(100)),
+        "group": ["A"] * 95 + ["B"] * 5,
+        "approved": [0, 1] * 50,
+    }
+    report = _report(data, target_column="approved", sensitive_attributes="group", numerical_features=",")
+    assert report["skewness_analysis"] == {}
+    assert report["representation_bias"]["group"]["underrepresented_groups"] == {"B": pytest.approx(0.05)}
+
+
+def test_continuous_target_skips_group_outcome_checks():
+    data = {"score": [i * 1.5 for i in range(60)], "group": ["A", "B"] * 30}
+    report = _report(data, target_column="score", sensitive_attributes="group", numerical_features=",")
+    assert report["correlation_bias"] == {}
+    assert report["class_imbalance"] == {}
+    assert report["notes"]

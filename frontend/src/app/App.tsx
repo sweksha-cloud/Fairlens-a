@@ -24,6 +24,7 @@ export type AnalysisResult = {
       counts: { [key: string]: number };
       proportions: { [key: string]: number };
       representation_ratio: number;
+      underrepresented_groups?: { [group: string]: number };
     };
   };
   correlation_bias: {
@@ -31,9 +32,17 @@ export type AnalysisResult = {
       chi2_statistic: number;
       p_value: number;
       is_correlated: boolean;
+      cramers_v?: number;
+      strength?: string;
+      statistically_significant?: boolean;
+      low_expected_counts?: boolean;
+      /** Share of each outcome within each group, e.g. { "Group A": { "1": 0.8, "0": 0.2 } }. */
+      outcome_rates?: { [group: string]: { [outcome: string]: number } };
+      max_rate_gap?: number;
     };
   };
   detected_issues: string[];
+  notes?: string[];
   summary: {
     total_issues_detected: number;
     bias_severity: string;

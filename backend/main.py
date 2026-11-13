@@ -1,3 +1,24 @@
+MAX_TARGET_CLASSES = 20       # more distinct values than this: treat the target as continuous
+UNDERREPRESENTED_SHARE = 0.10  # a group below 10% of rows is flagged as under-represented
+MIN_CRAMERS_V = 0.10           # below this, a "significant" association is too weak to flag...
+MIN_RATE_GAP = 0.10            # ...unless some outcome's rate differs by 10+ points between groups
+MIN_GROUP_ROWS = 30            # groups smaller than this are left out of the rate-gap comparison
+
+
+def _strength_label(v):
+    if v >= 0.3:
+        return "strong"
+    if v >= 0.2:
+        return "moderate"
+    if v >= 0.1:
+        return "weak"
+    return "negligible"
+
+
+def _format_p(p):
+    return "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
+
+
 def statistical_method(data, target_column=None, sensitive_attributes=None, numerical_features=None):
     """
     Statistical methods for bias detection in datasets.
@@ -38,10 +59,20 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
 
     # 1. Skewness Analysis for Numerical Features
     if numerical_features is None:
-        numerical_features = data.select_dtypes(include=[np.number]).columns.tolist()
+        # Automatic choice: numeric columns, minus ID-like ones (a distinct value on every row).
+        numerical_features = [
+            c for c in data.select_dtypes(include=[np.number]).columns
+            if data[c].nunique(dropna=True) < len(data)
+        ]
 
     for feature in numerical_features:
-        if feature in data.columns:
+        # Skip the outcome itself, and columns that aren't numeric or have too few values.
+        if (
+            feature in data.columns
+            and feature != target_column
+            and pd.api.types.is_numeric_dtype(data[feature])
+            and data[feature].dropna().nunique() > 2
+        ):
             skew_value = stats.skew(data[feature].dropna())
             bias_report["skewness_analysis"][feature] = {
                 "skewness": float(skew_value),
@@ -58,14 +89,28 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                     f"HIGH SKEWNESS: Feature '{feature}' has a skewness of {skew_value:.3f}"
                 )
 
+    # A target with many distinct values (e.g. a continuous score) can't be treated as
+    # classes: the imbalance ratio and the chi-square test would be meaningless.
+    target_is_categorical = (
+        bool(target_column)
+        and target_column in data.columns
+        and data[target_column].nunique(dropna=True) <= MAX_TARGET_CLASSES
+    )
+    bias_report["notes"] = []
+    if target_column and target_column in data.columns and not target_is_categorical:
+        bias_report["notes"].append(
+            f"The outcome column '{target_column}' has more than {MAX_TARGET_CLASSES} distinct values, "
+            "so it was not treated as categories. Class-balance and group-outcome checks were skipped."
+        )
+
     # 2. Class Imbalance Analysis
-    if target_column and target_column in data.columns:
+    if target_is_categorical:
         class_counts = data[target_column].value_counts()
         class_proportions = data[target_column].value_counts(normalize=True)
 
         bias_report["class_imbalance"] = {
-            "class_counts": class_counts.to_dict(),
-            "class_proportions": class_proportions.to_dict(),
+            "class_counts": {str(k): int(v) for k, v in class_counts.items()},
+            "class_proportions": {str(k): float(v) for k, v in class_proportions.items()},
             "imbalance_ratio": class_counts.max() / class_counts.min()
             if class_counts.min() > 0
             else float("inf"),
@@ -85,55 +130,95 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                 value_counts = data[attr].value_counts()
                 proportions = data[attr].value_counts(normalize=True)
 
+                underrepresented = {
+                    str(k): float(v) for k, v in proportions.items() if v < UNDERREPRESENTED_SHARE
+                }
                 bias_report["representation_bias"][attr] = {
-                    "counts": value_counts.to_dict(),
-                    "proportions": proportions.to_dict(),
+                    "counts": {str(k): int(v) for k, v in value_counts.items()},
+                    "proportions": {str(k): float(v) for k, v in proportions.items()},
                     "representation_ratio": proportions.max() / proportions.min()
                     if proportions.min() > 0
                     else float("inf"),
+                    "underrepresented_groups": underrepresented,
                 }
 
-                # Flag underrepresentation
-                if proportions.min() < 0.1:
+                # Flag underrepresentation, naming the groups
+                if underrepresented:
+                    groups = ", ".join(
+                        f"{g} ({share:.1%})" for g, share in sorted(underrepresented.items(), key=lambda kv: kv[1])
+                    )
                     bias_report["detected_issues"].append(
-                        f"UNDERREPRESENTATION: Attribute '{attr}' has groups "
-                        "with less than 10% representation"
+                        f"UNDERREPRESENTATION: In '{attr}', these groups are under 10% of the data: {groups}"
                     )
 
     # 4. Correlation Bias (between sensitive attributes and target)
-    if target_column and sensitive_attributes and target_column in data.columns:
-        import pandas as pd  # ensure available locally
-
+    if target_is_categorical and sensitive_attributes:
         for attr in sensitive_attributes:
-            if attr in data.columns:
-                # Create contingency table
+            if attr in data.columns and attr != target_column:
                 contingency_table = pd.crosstab(data[attr], data[target_column])
+                if contingency_table.shape[0] < 2 or contingency_table.shape[1] < 2:
+                    continue
 
                 # Chi-square test for independence
-                chi2_raw, p_value_raw, dof, expected = stats.chi2_contingency(
-                    contingency_table
-                )
+                chi2_raw, p_value_raw, dof, expected = stats.chi2_contingency(contingency_table)
                 chi2 = float(chi2_raw)
                 p_value = float(p_value_raw)
 
+                # Cramér's V: effect size from 0 (no association) to 1 (fully determined).
+                # With thousands of rows almost any difference is "significant", so the
+                # strength of the association is what decides whether it is flagged.
+                n = contingency_table.to_numpy().sum()
+                min_dim = min(contingency_table.shape) - 1
+                cramers_v = float(np.sqrt(chi2 / (n * min_dim))) if n > 0 and min_dim > 0 else 0.0
+
+                # Chi-square is unreliable when many expected cell counts are below 5.
+                low_expected_share = float((expected < 5).mean())
+
+                # Outcome rate within each group (row-normalised), e.g. approval rate by race.
+                rates = pd.crosstab(data[attr], data[target_column], normalize="index")
+                outcome_rates = {
+                    str(group): {str(outcome): float(share) for outcome, share in row.items()}
+                    for group, row in rates.iterrows()
+                }
+
+                # Largest gap between groups in the rate of any one outcome (e.g. 47% vs 36%).
+                # Tiny groups give noisy rates, so only groups with enough rows are compared.
+                group_sizes = contingency_table.sum(axis=1)
+                comparable = rates[group_sizes >= MIN_GROUP_ROWS]
+                if len(comparable) < 2:
+                    comparable = rates
+                max_gap = float((comparable.max() - comparable.min()).max())
+
+                is_correlated = p_value < 0.05 and (cramers_v >= MIN_CRAMERS_V or max_gap >= MIN_RATE_GAP)
                 bias_report["correlation_bias"][attr] = {
                     "chi2_statistic": chi2,
                     "p_value": p_value,
-                    "is_correlated": p_value < 0.05,
+                    "cramers_v": cramers_v,
+                    "strength": _strength_label(cramers_v),
+                    "is_correlated": is_correlated,
+                    "statistically_significant": p_value < 0.05,
+                    "low_expected_counts": low_expected_share > 0.2,
+                    "outcome_rates": outcome_rates,
+                    "max_rate_gap": max_gap,
                 }
 
-                # Flag significant correlation
-                if p_value < 0.05:
+                if is_correlated:
                     bias_report["detected_issues"].append(
-                        "CORRELATION BIAS: Sensitive attribute "
-                        f"'{attr}' is significantly correlated with target (p={p_value:.2f})"
+                        f"CORRELATION BIAS: The outcome differs by '{attr}': rates between groups differ by up to "
+                        f"{max_gap:.0%} ({_strength_label(cramers_v)} association, Cramér's V = {cramers_v:.2f}, "
+                        f"{_format_p(p_value)})"
                     )
 
-    # Summary
+    # Summary. Severity is driven by the kind of finding, not just how many there are:
+    # skewed features are a data-quality note, outcome differences between groups matter most.
     total_issues = len(bias_report["detected_issues"])
-    if total_issues >= 5:
+    correlated = [v for v in bias_report["correlation_bias"].values() if v["is_correlated"]]
+    has_balance_issue = any(
+        i.startswith(("UNDERREPRESENTATION", "CLASS IMBALANCE")) for i in bias_report["detected_issues"]
+    )
+    if any(v["cramers_v"] >= 0.3 for v in correlated) or len(correlated) >= 2:
         severity = "high"
-    elif total_issues >= 3:
+    elif correlated or has_balance_issue:
         severity = "moderate"
     elif total_issues > 0:
         severity = "low"

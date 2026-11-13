@@ -76,8 +76,16 @@ async def analyze_bias_csv(
         df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
 
         # Parse comma-separated lists
-        sensitive_attrs = sensitive_attributes.split(',') if sensitive_attributes else None
-        numerical_feats = numerical_features.split(',') if numerical_features else None
+        # Leaving a field out (or sending it empty) means "choose automatically".
+        # A lone "," means "none selected": FastAPI turns an empty form value back into
+        # None, so the frontend needs a non-empty way to say "skip this check".
+        def _split(value):
+            if not value:
+                return None
+            return [c.strip() for c in value.split(',') if c.strip()]
+
+        sensitive_attrs = _split(sensitive_attributes)
+        numerical_feats = _split(numerical_features)
 
         # Run bias analysis
         bias_report = statistical_method(
