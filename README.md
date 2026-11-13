@@ -12,7 +12,9 @@ columns describe people (race, sex, age group…), and it reports, in plain Engl
 
 It answers *"is this data safe to train on?"*, not *"is my model fair?"*. No model is trained.
 
-Built for the Responsible Computing Club at San José State University.
+FairLens is a Responsible Computing Club (RCC) project at San José State University, built for people
+on campus to use: students checking datasets for class projects, researchers vetting data before a
+study, or anyone at SJSU who wants a quick fairness check before training a model.
 
 ---
 
@@ -106,7 +108,7 @@ See [DEPLOY.md](DEPLOY.md): the API runs on Render's free tier (`render.yaml`), 
 
 ## Team
 
-Built by Sweksha Shaw in collaboration with Dhananjay Surti, Siddarth Shekhar, Grace and Ayesha.
+An RCC project, built by Sweksha Shaw in collaboration with Dhananjay Surti, Siddarth Shekhar, Grace and Ayesha.
 The original team project is at [Kagehina1218/FairLens-A](https://github.com/Kagehina1218/FairLens-A).
 
 ## License
