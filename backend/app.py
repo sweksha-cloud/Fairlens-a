@@ -1,7 +1,4 @@
-import os
-
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
@@ -13,18 +10,6 @@ app = FastAPI(
     title="Fairlens Bias Detection API",
     description="API for detecting statistical bias in datasets",
     version="1.0.0"
-)
-
-# Allow the frontend (dev server + deployed origin) to call the API from the browser.
-# Set ALLOWED_ORIGINS as a comma-separated list in production.
-_default_origins = "http://localhost:5173,http://localhost:4173,http://127.0.0.1:5173"
-allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 class BiasAnalysisRequest(BaseModel): 
@@ -52,22 +37,22 @@ async def health_check():
 
 @app.post("/analyze-bias-csv")
 async def analyze_bias_csv(
-    file: UploadFile = File(...),
-    target_column: Optional[str] = Form(None),
-    sensitive_attributes: Optional[str] = Form(None),
-    numerical_features: Optional[str] = Form(None),
-):
+    file: UploadFile = File(...), 
+    target_column: Optional[str] = None, 
+    sensitive_attributes: Optional[str] = None, 
+    numerical_features: Optional[str] = None
+): 
 
     """
-    Analyze bias in a CSV dataset.
+    Analize bias in a CSV dataset
 
-    Multipart form fields:
+    Parameters: 
     - file: CSV file to analyze
     - target_column: Name of target/label column
     - sensitive_attributes: Comma-separated list of sensitive attribute columns
     - numerical_features: Comma-separated list of numerical feature columns
 
-    Returns:
+    Returns: 
     - Comprehensive bias analysis report
     """
     try: 

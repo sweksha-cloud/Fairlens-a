@@ -1,59 +1,75 @@
-# FairLens-A — Frontend
+# React + TypeScript + Vite
 
-React + Vite single-page app for the FairLens-A ML bias detector. The UI was
-designed in Figma Make and exported here; the shadcn/ui component library and
-other unused Figma Make scaffolding have been stripped out.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Stack
+Currently, two official plugins are available:
 
-- React 18 + Vite 6
-- Tailwind CSS v4 (`@tailwindcss/vite`)
-- Recharts (charts on the Analysis page)
-- lucide-react (icons)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Run locally
+## React Compiler
 
-```bash
-cd frontend
-npm install
-npm run dev
+The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+
+Note: This will impact Vite dev & build performances.
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-Opens on http://localhost:5173 (Vite picks the next free port if 5173 is taken).
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-Other scripts:
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-```bash
-npm run build     # production build to dist/
-npm run preview   # serve the production build locally
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-## Structure
-
-```
-src/
-  main.tsx                 entry
-  app/
-    App.tsx                page router (plain useState, 4 pages)
-    config.ts              backendUrl (see "Backend wiring" below)
-    components/
-      Navigation.tsx       top nav (raw Figma-generated SVG layout)
-      HomePage.tsx
-      UploadPage.tsx
-      AnalysisPage.tsx
-      AboutPage.tsx
-    imports/
-      svg-fertresihc.ts    generated SVG path data for the hero/background art
-  styles/                  Tailwind entry + theme tokens
-```
-
-## Backend wiring (not done yet)
-
-`UploadPage.tsx` currently returns a hardcoded mock COMPAS result on "Analyze"
-instead of calling the API. To connect it to the FastAPI backend:
-
-1. `POST` the uploaded file (multipart) to `${environment.backendUrl}/analyze-bias-csv`.
-2. Add UI to collect `target_column`, `sensitive_attributes`, and
-   `numerical_features` — the backend needs these and the upload page collects
-   none today.
-3. The backend response shape already matches the `AnalysisResult` type in `App.tsx`.

@@ -1,14 +1,10 @@
-# FairLens-A backend — Python 3.11+
-fastapi>=0.115
-uvicorn>=0.30
-python-multipart>=0.0.9
-
-pandas>=2.2
-numpy>=1.26
-scipy>=1.13
-scikit-learn>=1.5
-
-matplotlib>=3.8
-seaborn>=0.13
-
-requests>=2.31
+fastapi==0.121.1
+uvicorn==0.38.0
+pandas==2.3.3
+numpy==2.3.4
+scipy==1.16.3
+python-multipart==0.0.10
+scikit-learn==1.7.2
+requests==2.31.0
+matplotlib==3.8.1
+seaborn==0.12.3
