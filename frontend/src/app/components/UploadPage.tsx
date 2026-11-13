@@ -53,6 +53,14 @@ export default function UploadPage({ onNavigate, onFileAnalyzed }: UploadPagePro
       setError('Please choose a .csv file.');
       return;
     }
+    // The hosted API accepts uploads up to 4.5 MB (Vercel's request size limit).
+    if (import.meta.env.PROD && f.size > 4.5 * 1024 * 1024) {
+      setError(
+        `This file is ${(f.size / 1024 / 1024).toFixed(1)} MB; the online version accepts up to 4.5 MB. ` +
+          'Try a sample of the rows, or run FairLens locally (see the README) for larger files.',
+      );
+      return;
+    }
     setError(null);
     setFile(f);
   };

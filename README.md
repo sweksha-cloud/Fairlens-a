@@ -102,7 +102,8 @@ request.
 
 ## Deploy
 
-See [DEPLOY.md](DEPLOY.md): the API runs on Render's free tier (`render.yaml`), the frontend on Vercel.
+See [DEPLOY.md](DEPLOY.md): one Vercel project serves the website and the API (under `/api`). The
+online version accepts CSVs up to 4.5 MB; run it locally for bigger files.
 
 ---
 

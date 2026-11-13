@@ -1,0 +1,8 @@
+# Dependencies for the API as deployed on Vercel (api/index.py).
+# The web API only uses the statistical checks; backend/requirements.txt has the full set
+# (scikit-learn, matplotlib, seaborn) for the Python examples and unsupervised analyses.
+fastapi>=0.115
+python-multipart>=0.0.9
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
