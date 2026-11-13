@@ -113,7 +113,8 @@ FairLens was built by:
 | Dhananjay Surti | | Statistical bias method (skew, class imbalance, representation, χ²) and the first FastAPI endpoint |
 | Siddarth Shekhar | SiddarthShekhar1994 | Unsupervised analytics (clustering, outliers, drift, intersectional), backend pipeline, experiment runner |
 | Grace | Kagehina1218 | PCA → ANOVA → IsolationForest pipeline, visualization, frontend restructure |
-| Sweksha Shaw | sweksha-cloud | Frontend, backend integration, tests, CI, plain-language report and deployment |
+| Ayesha | | Frontend design (Figma and Figma Make) |
+| Sweksha Shaw | sweksha-cloud | Frontend design (Figma and Figma Make), frontend build, backend integration, tests, CI, plain-language report and deployment |
 
 ## License
 
