@@ -106,15 +106,8 @@ See [DEPLOY.md](DEPLOY.md): the API runs on Render's free tier (`render.yaml`), 
 
 ## Team
 
-FairLens was built by:
-
-| Name | GitHub | Contribution |
-| --- | --- | --- |
-| Dhananjay Surti | | Statistical bias method (skew, class imbalance, representation, χ²) and the first FastAPI endpoint |
-| Siddarth Shekhar | SiddarthShekhar1994 | Unsupervised analytics (clustering, outliers, drift, intersectional), backend pipeline, experiment runner |
-| Grace | Kagehina1218 | PCA → ANOVA → IsolationForest pipeline, visualization, frontend restructure |
-| Ayesha | | Frontend design (Figma and Figma Make) |
-| Sweksha Shaw | sweksha-cloud | Frontend design (Figma and Figma Make), frontend build, backend integration, tests, CI, plain-language report and deployment |
+Built by Sweksha Shaw in collaboration with Dhananjay Surti, Siddarth Shekhar, Grace and Ayesha.
+The original team project is at [Kagehina1218/FairLens-A](https://github.com/Kagehina1218/FairLens-A).
 
 ## License
 
