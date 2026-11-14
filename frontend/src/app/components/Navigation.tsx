@@ -20,9 +20,9 @@ export default function Navigation({ currentPage, onNavigate }: NavigationProps)
         <button
           onClick={() => onNavigate('home')}
           aria-label="FairLens-A home"
-          className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0FDBFA] to-[#1CB4EB] font-logo text-[9px] font-bold text-white shadow-[0_0_16px_rgba(15,219,250,0.5)] sm:size-10 sm:text-[10px]"
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#0FDBFA] to-[#1CB4EB] font-logo text-sm font-bold text-white shadow-[0_0_16px_rgba(15,219,250,0.5)] sm:size-10 sm:text-base"
         >
-          LOGO
+          FL
         </button>
 
         {/* Links */}

@@ -45,9 +45,11 @@ function buildFindings(result: AnalysisResult): Finding[] {
   for (const [attr, d] of Object.entries(result.correlation_bias)) {
     if (!d.is_correlated || !d.outcome_rates) continue;
     const outcome = focusOutcome(d.outcome_rates);
-    const sorted = Object.entries(d.outcome_rates)
-      .map(([g, r]) => [g, r[outcome] ?? 0] as const)
-      .sort((a, b) => b[1] - a[1]);
+    // Compare only groups with enough rows to trust (30+, as the API does), when sizes are known.
+    const counts = result.representation_bias[attr]?.counts ?? {};
+    const all = Object.entries(d.outcome_rates).map(([g, r]) => [g, r[outcome] ?? 0] as const);
+    const big = all.filter(([g]) => (counts[g] ?? Infinity) >= 30);
+    const sorted = (big.length >= 2 ? big : all).sort((a, b) => b[1] - a[1]);
     const [hi, lo] = [sorted[0], sorted[sorted.length - 1]];
     out.push({
       tone: 'bad',
@@ -62,7 +64,11 @@ function buildFindings(result: AnalysisResult): Finding[] {
     out.push({
       tone: 'warn',
       title: `Some ${attr.replace(/_/g, ' ')} groups are rare`,
-      meaning: `${small.map(([g, v]) => `${g} (${pct(v)})`).join(', ')} each make up under ${+((d.rare_threshold ?? 0.1) * 100).toFixed(1)}% of rows, so a model will see few examples of them and may perform worse for them.`,
+      meaning: `${small
+        .sort((a, b) => a[1] - b[1])
+        .slice(0, 8)
+        .map(([g, v]) => `${g} (${pct(v)})`)
+        .join(', ')}${small.length > 8 ? ` and ${small.length - 8} more` : ''} each make up under ${+((d.rare_threshold ?? 0.1) * 100).toFixed(1)}% of rows, so a model will see few examples of them and may perform worse for them.`,
       action: 'Collect more data for these groups if you can, and report model accuracy separately for them.',
     });
   }
@@ -400,7 +406,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
-                      <YAxis dataKey="label" type="category" width={110} interval={0} />
+                      <YAxis dataKey="label" type="category" width={150} interval={0} tick={{ fontSize: 12 }} />
                       <Tooltip contentStyle={{ backgroundColor: 'white', border: '2px solid #3CE6DD' }} />
                       <Bar dataKey="value" name="Count" radius={[0, 8, 8, 0]}>
                         {Object.entries(data.counts).map((_, index) => (

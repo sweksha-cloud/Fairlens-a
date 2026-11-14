@@ -274,7 +274,7 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                     "chi2_statistic": chi2,
                     "p_value": p_value,
                     "cramers_v": cramers_v,
-                    "strength": _strength_label(cramers_v),
+                    "strength": _strength_label(round(cramers_v, 2)),
                     "is_correlated": is_correlated,
                     "statistically_significant": p_value < 0.05,
                     "low_expected_counts": low_expected_share > 0.2,
@@ -285,7 +285,7 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                 if is_correlated:
                     bias_report["detected_issues"].append(
                         f"CORRELATION BIAS: The outcome differs by '{attr}': rates between groups differ by up to "
-                        f"{max_gap:.0%} ({_strength_label(cramers_v)} association, Cramér's V = {cramers_v:.2f}, "
+                        f"{max_gap:.0%} ({_strength_label(round(cramers_v, 2))} association, Cramér's V = {cramers_v:.2f}, "
                         f"{_format_p(p_value)})"
                     )
 

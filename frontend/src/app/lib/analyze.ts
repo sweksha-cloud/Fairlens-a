@@ -46,14 +46,14 @@ export type CsvPreview = {
 
 /** Column name looks like a protected / personal characteristic. */
 function looksSensitive(name: string): boolean {
-  return /(race|ethnic|sex|gender|age_?(cat|group|band|bracket)|religion|disab|marital|nationality|citizen|native|veteran)/i.test(
+  return /(race|ethnic|sex|gender|^age$|age_?(cat|group|band|bracket)|religion|disab|marital|nationality|citizen|native|veteran)/i.test(
     name,
   );
 }
 
 /** Column name looks like an outcome / label. */
 function looksLikeOutcome(name: string): boolean {
-  return /(target|label|outcome|class|approved|approval|accepted|hired|admit|default|recid|churn|fraud|result|decision|y$|^y_)/i.test(
+  return /(target|label|outcome|class|approved|approval|accepted|hired|admit|default|recid|churn|fraud|result|decision|income|salary|survived|passed|y$|^y_)/i.test(
     name,
   );
 }
@@ -84,6 +84,7 @@ export async function previewCsv(file: File): Promise<CsvPreview> {
   const suggestedNumeric: string[] = [];
   const categoricalColumns: string[] = [];
   const outcomeCandidates: { name: string; distinct: number }[] = [];
+  const yesNoColumns: string[] = [];
 
   columns.forEach((name, idx) => {
     const vals = sample.map((r) => r[idx]).filter((v) => v !== undefined && v !== '');
@@ -95,10 +96,13 @@ export async function previewCsv(file: File): Promise<CsvPreview> {
     if (distinct >= 2 && distinct <= 5 && looksLikeOutcome(name) && !looksSensitive(name)) {
       outcomeCandidates.push({ name, distinct });
     }
+    if (distinct === 2 && !looksSensitive(name)) yesNoColumns.push(name);
 
     if (isNumeric) {
       // A measurement, not an identifier: not ID-named and not near-unique.
       if (!looksLikeId(name) && uniqueRatio < 0.9) suggestedNumeric.push(name);
+      // A number describing people (like age): the API groups it into ranges.
+      if (looksSensitive(name)) categoricalColumns.push(name);
     } else {
       // A usable group category: few distinct values, not a name/timestamp.
       if (uniqueRatio < 0.5 && !looksLikePii(name)) categoricalColumns.push(name);
@@ -107,7 +111,8 @@ export async function previewCsv(file: File): Promise<CsvPreview> {
 
   // Prefer yes/no columns, then the right-most match (outcomes are usually last).
   outcomeCandidates.sort((a, b) => a.distinct - b.distinct || columns.indexOf(b.name) - columns.indexOf(a.name));
-  const suggestedTarget = outcomeCandidates[0]?.name ?? '';
+  // No outcome-like name: fall back to the right-most yes/no column.
+  const suggestedTarget = outcomeCandidates[0]?.name ?? yesNoColumns[yesNoColumns.length - 1] ?? '';
   const suggestedSensitive = categoricalColumns.filter((c) => looksSensitive(c) && c !== suggestedTarget);
 
   return {
