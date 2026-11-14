@@ -8,7 +8,7 @@
   "functions": {
     "api/index.py": {
       "includeFiles": "backend/{app,main}.py",
-      "excludeFiles": "{frontend/**,backend/tests/**,backend/examples/**}"
+      "excludeFiles": "{frontend/**,backend/tests/**,backend/examples/**,demo-video/**,docs/**}"
     }
   }
 }

@@ -1,0 +1,87 @@
+{
+  "total": 32561,
+  "columns": 15,
+  "shown": [
+    "age",
+    "education",
+    "occupation",
+    "race",
+    "sex",
+    "native_country",
+    "income"
+  ],
+  "rows": [
+    {
+      "age": "39",
+      "education": "Bachelors",
+      "occupation": "Adm-clerical",
+      "race": "White",
+      "sex": "Male",
+      "native_country": "United-States",
+      "income": "<=50K"
+    },
+    {
+      "age": "50",
+      "education": "Bachelors",
+      "occupation": "Exec-managerial",
+      "race": "White",
+      "sex": "Male",
+      "native_country": "United-States",
+      "income": "<=50K"
+    },
+    {
+      "age": "38",
+      "education": "HS-grad",
+      "occupation": "Handlers-cleaners",
+      "race": "White",
+      "sex": "Male",
+      "native_country": "United-States",
+      "income": "<=50K"
+    },
+    {
+      "age": "53",
+      "education": "11th",
+      "occupation": "Handlers-cleaners",
+      "race": "Black",
+      "sex": "Male",
+      "native_country": "United-States",
+      "income": "<=50K"
+    },
+    {
+      "age": "28",
+      "education": "Bachelors",
+      "occupation": "Prof-specialty",
+      "race": "Black",
+      "sex": "Female",
+      "native_country": "Cuba",
+      "income": "<=50K"
+    },
+    {
+      "age": "37",
+      "education": "Masters",
+      "occupation": "Exec-managerial",
+      "race": "White",
+      "sex": "Female",
+      "native_country": "United-States",
+      "income": "<=50K"
+    },
+    {
+      "age": "49",
+      "education": "9th",
+      "occupation": "Other-service",
+      "race": "Black",
+      "sex": "Female",
+      "native_country": "Jamaica",
+      "income": "<=50K"
+    },
+    {
+      "age": "40",
+      "education": "Assoc-voc",
+      "occupation": "Craft-repair",
+      "race": "Asian-Pac-Islander",
+      "sex": "Male",
+      "native_country": "?",
+      "income": ">50K"
+    }
+  ]
+}

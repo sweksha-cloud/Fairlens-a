@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import svgPaths from "../imports/svg-fertresihc";
 import type { Page } from "./Navigation";
 
@@ -54,7 +55,26 @@ const CHECKS = [
 
 const CARD = "rounded-2xl border border-[#3CE6DD]/20 bg-white/10 p-6 backdrop-blur-sm";
 
+function PlayIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M8 5.14v13.72a1 1 0 0 0 1.5.86l11.04-6.86a1 1 0 0 0 0-1.72L9.5 4.28A1 1 0 0 0 8 5.14z" />
+    </svg>
+  );
+}
+
 export default function HomePage({ onNavigate }: HomePageProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  const playDemo = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.scrollIntoView({ behavior: "smooth", block: "center" });
+    setPlaying(true);
+    v.play().catch(() => {});
+  };
+
   return (
     <div className="relative overflow-hidden">
       {/* Full-width decorative heart glow behind the hero */}
@@ -88,16 +108,57 @@ export default function HomePage({ onNavigate }: HomePageProps) {
           >
             Get Started — Upload Your Dataset
           </button>
-          <a
-            href="#how-it-works"
-            className="rounded-xl border-2 border-[#3CE6DD] px-8 py-4 font-display text-base font-bold text-[#3CE6DD] transition-colors hover:bg-[#3CE6DD]/10 sm:text-lg"
+          <button
+            onClick={playDemo}
+            className="group relative flex items-center justify-center gap-3 rounded-xl border-2 border-[#3CE6DD] bg-black/40 px-8 py-4 font-display text-base font-bold text-[#3CE6DD] shadow-[0_0_32px_rgba(60,230,221,0.35)] transition-colors hover:bg-[#3CE6DD]/10 sm:text-lg"
           >
-            See how it works
-          </a>
+            <span className="relative grid size-8 place-items-center rounded-full bg-[#3CE6DD] text-black">
+              <span className="absolute inset-0 animate-ping rounded-full bg-[#3CE6DD]/60" aria-hidden />
+              <PlayIcon className="relative ml-0.5 size-4" />
+            </span>
+            Watch the 30-second demo
+          </button>
         </div>
         <p className="mt-5 font-body text-sm text-white/60">
           Free · no sign-up · nothing you upload is stored · no model is trained
         </p>
+      </section>
+
+      {/* Demo video */}
+      <section id="demo" className="relative z-10 mx-auto max-w-5xl scroll-mt-20 px-4 pb-8 pt-4">
+        <h2 className="text-center font-display text-[clamp(1.75rem,4vw,3rem)] font-bold text-white">
+          See it in 30 seconds
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-center font-body text-lg text-white/75">
+          FairLens checking 32,561 real census records, start to finish, on this site.
+        </p>
+        <div className="relative mt-8 overflow-hidden rounded-2xl border border-[#3CE6DD]/40 shadow-[0_12px_60px_rgba(60,230,221,0.3)]">
+          <video
+            ref={videoRef}
+            src="/demo/fairlens-demo.mp4"
+            poster="/demo/poster.jpg"
+            controls={playing}
+            playsInline
+            preload="metadata"
+            onPlay={() => setPlaying(true)}
+            className="block aspect-video w-full bg-black"
+          />
+          {!playing && (
+            <button
+              onClick={playDemo}
+              aria-label="Play the demo video"
+              className="group absolute inset-0 grid place-items-center bg-black/35 transition-colors hover:bg-black/20"
+            >
+              <span className="relative grid size-20 place-items-center rounded-full bg-[#3CE6DD] text-black shadow-[0_0_48px_rgba(60,230,221,0.7)] transition-transform group-hover:scale-110 sm:size-28">
+                <span className="absolute inset-0 animate-ping rounded-full bg-[#3CE6DD]/50" aria-hidden />
+                <PlayIcon className="relative ml-1 size-9 sm:size-12" />
+              </span>
+              <span className="absolute bottom-5 rounded-full bg-black/70 px-4 py-1.5 font-ui text-sm font-semibold text-white sm:text-base">
+                ▶ Watch the demo · 0:32
+              </span>
+            </button>
+          )}
+        </div>
       </section>
 
       {/* How it works */}

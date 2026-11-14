@@ -1,0 +1,25 @@
+{
+  "name": "fairlens-demo-video",
+  "private": true,
+  "description": "The FairLens demo video, built with Remotion from the live site and its real output on the UCI Adult census data.",
+  "scripts": {
+    "data": "node scripts/fetch-data.mjs",
+    "studio": "remotion studio",
+    "record": "node scripts/record-site.mjs",
+    "render": "remotion render FairLensDemo out/fairlens-demo-1x.mp4 && ffmpeg -y -loglevel error -i out/fairlens-demo-1x.mp4 -filter:v setpts=PTS/1.25 -r 30 -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart out/fairlens-demo.mp4",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "@remotion/google-fonts": "4.0.534",
+    "@remotion/transitions": "4.0.534",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "playwright-core": "1.63.0",
+    "typescript": "7.0.2"
+  }
+}

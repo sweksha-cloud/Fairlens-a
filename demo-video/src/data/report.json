@@ -1,0 +1,88 @@
+{
+  "severity": "high",
+  "issues": 12,
+  "notes": [
+    "'age' is numeric with many values, so it was grouped into 5 ranges of roughly equal size (17-26, 27-33, 34-41, 42-50, 51-90).",
+    "583 rows have 'native_country' marked as unknown (for example \"?\"); they were left out of the 'native_country' checks rather than counted as a group."
+  ],
+  "sex": {
+    "rates": [
+      {
+        "group": "Female",
+        "rate": 0.10946058861758426,
+        "rows": 10771
+      },
+      {
+        "group": "Male",
+        "rate": 0.3057365764111978,
+        "rows": 21790
+      }
+    ],
+    "cramersV": 0.21590381954916826,
+    "pValue": 0
+  },
+  "age": {
+    "rates": [
+      {
+        "group": "17-26",
+        "rate": 0.024596998332406892,
+        "rows": 7196
+      },
+      {
+        "group": "27-33",
+        "rate": 0.17898441427853193,
+        "rows": 5967
+      },
+      {
+        "group": "34-41",
+        "rate": 0.31376608014194884,
+        "rows": 6763
+      },
+      {
+        "group": "42-50",
+        "rate": 0.3847773279352227,
+        "rows": 6175
+      },
+      {
+        "group": "51-90",
+        "rate": 0.32476780185758514,
+        "rows": 6460
+      }
+    ],
+    "cramersV": 0.30909409619141953,
+    "pValue": 0
+  },
+  "race": {
+    "rates": [
+      {
+        "group": "Amer-Indian-Eskimo",
+        "rate": 0.1157556270096463,
+        "rows": 311
+      },
+      {
+        "group": "Asian-Pac-Islander",
+        "rate": 0.26564003849855633,
+        "rows": 1039
+      },
+      {
+        "group": "Black",
+        "rate": 0.12387964148527529,
+        "rows": 3124
+      },
+      {
+        "group": "Other",
+        "rate": 0.09225092250922509,
+        "rows": 271
+      },
+      {
+        "group": "White",
+        "rate": 0.2558599367270636,
+        "rows": 27816
+      }
+    ],
+    "cramersV": 0.10081216080655508,
+    "pValue": 2.305960610160958e-70
+  },
+  "unknownCountry": 583,
+  "countries": 41
+}

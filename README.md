@@ -6,6 +6,11 @@
 
 **Try it: [fairlens-a.vercel.app](https://fairlens-a.vercel.app)** (no sign-up; nothing you upload is stored)
 
+**▶ [Watch the 30-second demo](https://fairlens-a.vercel.app/demo/fairlens-demo.mp4)**: FairLens checking the UCI Adult census data
+(32,561 people) on the live site.
+
+<a href="https://fairlens-a.vercel.app/demo/fairlens-demo.mp4"><img src="docs/fairlens-demo.gif" alt="FairLens demo: uploading the Adult census data and reading the bias report" width="800"></a>
+
 Upload a CSV, tell FairLens which column is the outcome (for example *approved* or *hired*) and which
 columns describe people (race, sex, age group…), and it reports, in plain English:
 
@@ -54,6 +59,7 @@ pipeline). They run from Python (`backend/main.py`, `backend/examples/`) and are
 ```
 frontend/   React + Vite single-page app (upload, column selection, report and charts)
 backend/    FastAPI service (the detection methods and the API)
+demo-video/ the demo video, built with Remotion from the live site (see demo-video/README.md)
 ```
 
 ## Run it locally
