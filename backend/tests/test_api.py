@@ -152,3 +152,34 @@ def test_continuous_target_skips_group_outcome_checks():
     assert report["correlation_bias"] == {}
     assert report["class_imbalance"] == {}
     assert report["notes"]
+
+
+def test_numeric_group_column_is_binned_into_ranges():
+    ages = [17 + (i % 60) for i in range(300)]
+    data = {"age": ages, "approved": [1 if a > 40 else 0 for a in ages]}
+    report = _report(data, target_column="approved", sensitive_attributes="age", numerical_features=",")
+    counts = report["representation_bias"]["age"]["counts"]
+    assert 2 <= len(counts) <= 5
+    assert all("-" in label for label in counts)
+    assert report["representation_bias"]["age"]["underrepresented_groups"] == {}
+    assert any("grouped into" in n for n in report["notes"])
+
+
+def test_question_mark_is_treated_as_missing_not_a_group():
+    data = {"country": ["US"] * 60 + ["?"] * 20 + ["MX"] * 20, "approved": [0, 1] * 50}
+    report = _report(data, target_column="approved", sensitive_attributes="country", numerical_features=",")
+    rep = report["representation_bias"]["country"]
+    assert "?" not in rep["counts"]
+    assert rep["missing"] == 20
+    assert "?" not in report["correlation_bias"]["country"]["outcome_rates"]
+    assert any("unknown" in n for n in report["notes"])
+
+
+def test_rare_threshold_scales_with_many_groups():
+    groups = [f"g{i}" for i in range(20) for _ in range(50)] + ["tiny"] * 3
+    data = {"group": groups, "approved": [i % 2 for i in range(len(groups))]}
+    report = _report(data, target_column="approved", sensitive_attributes="group", numerical_features=",")
+    rep = report["representation_bias"]["group"]
+    # 20 even groups of ~5% each are not rare; only the 3-row group is.
+    assert rep["underrepresented_groups"].keys() == {"tiny"}
+    assert rep["rare_threshold"] == pytest.approx(0.5 / 21)

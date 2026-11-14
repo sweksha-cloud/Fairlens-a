@@ -3,6 +3,10 @@ UNDERREPRESENTED_SHARE = 0.10  # a group below 10% of rows is flagged as under-r
 MIN_CRAMERS_V = 0.10           # below this, a "significant" association is too weak to flag...
 MIN_RATE_GAP = 0.10            # ...unless some outcome's rate differs by 10+ points between groups
 MIN_GROUP_ROWS = 30            # groups smaller than this are left out of the rate-gap comparison
+MAX_GROUPS = 10                # a numeric column describing people with more values than this is binned
+NUMERIC_BINS = 5               # ...into this many ranges of roughly equal size (e.g. age 17-25, 26-33, ...)
+# Text that stands for "unknown" in real datasets (e.g. "?" in the UCI Adult census data).
+MISSING_MARKERS = {"", "?", "na", "n/a", "nan", "null", "none", "-"}
 
 
 def _strength_label(v):
@@ -13,6 +17,50 @@ def _strength_label(v):
     if v >= 0.1:
         return "weak"
     return "negligible"
+
+
+def _rare_threshold(n_groups):
+    """Share below which a group counts as rare: 10%, or half an equal share when there are many groups.
+
+    With 2-5 groups this is 10%. With 42 countries an equal share is 2.4%, so 10% would flag nearly
+    every group; half an equal share (1.2%) flags only the genuinely rare ones.
+    """
+    if n_groups <= 0:
+        return UNDERREPRESENTED_SHARE
+    return min(UNDERREPRESENTED_SHARE, 0.5 / n_groups)
+
+
+def _clean_groups(series):
+    """Treat placeholder text like "?" as missing, so "unknown" isn't reported as a group."""
+    import pandas as pd
+
+    if pd.api.types.is_object_dtype(series) or pd.api.types.is_string_dtype(series):
+        stripped = series.astype("string").str.strip()
+        return stripped.mask(stripped.str.lower().isin(MISSING_MARKERS)).astype(object)
+    return series
+
+
+def _bin_numeric(series):
+    """Group a numeric column like age into a few ranges of roughly equal size.
+
+    Returns (binned series, list of range labels), or (series, None) when it doesn't need binning.
+    """
+    import pandas as pd
+
+    if not pd.api.types.is_numeric_dtype(series) or series.nunique(dropna=True) <= MAX_GROUPS:
+        return series, None
+    values = series.dropna()
+    edges = sorted(set(values.quantile([i / NUMERIC_BINS for i in range(NUMERIC_BINS + 1)]).tolist()))
+    if len(edges) < 3:
+        return series, None
+    whole = bool((values == values.round()).all())
+    fmt = (lambda x: f"{int(round(x))}") if whole else (lambda x: f"{x:.3g}")
+    labels = []
+    for i, (lo, hi) in enumerate(zip(edges[:-1], edges[1:])):
+        start = lo if i == 0 or not whole else lo + 1
+        labels.append(f"{fmt(start)}-{fmt(hi)}")
+    binned = pd.cut(series, bins=edges, labels=labels, include_lowest=True, duplicates="drop")
+    return binned.astype(object), labels
 
 
 def _format_p(p):
@@ -56,6 +104,35 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
         "correlation_bias": {},
         "detected_issues": []
     }
+    bias_report["notes"] = []
+
+    # Clean up the columns that define groups before any check uses them. Work on a copy so the
+    # caller's DataFrame is left alone.
+    data = data.copy()
+    if target_column and target_column in data.columns:
+        data[target_column] = _clean_groups(data[target_column])
+    for attr in sensitive_attributes or []:
+        if attr not in data.columns or attr == target_column:
+            continue
+        cleaned = _clean_groups(data[attr])
+        if pd.api.types.is_object_dtype(cleaned):
+            # A column of numbers stored as text (e.g. after "?" was removed) is still numeric.
+            as_num = pd.to_numeric(cleaned, errors="coerce")
+            if as_num.notna().sum() == cleaned.notna().sum() and cleaned.notna().any():
+                cleaned = as_num
+        missing = int(cleaned.isna().sum() - data[attr].isna().sum())
+        if missing > 0:
+            bias_report["notes"].append(
+                f"{missing} rows have '{attr}' marked as unknown (for example \"?\"); they were left out of the "
+                f"'{attr}' checks rather than counted as a group."
+            )
+        binned, labels = _bin_numeric(cleaned)
+        if labels:
+            bias_report["notes"].append(
+                f"'{attr}' is numeric with many values, so it was grouped into {len(labels)} ranges of "
+                f"roughly equal size ({', '.join(labels)})."
+            )
+        data[attr] = binned
 
     # 1. Skewness Analysis for Numerical Features
     if numerical_features is None:
@@ -96,7 +173,6 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
         and target_column in data.columns
         and data[target_column].nunique(dropna=True) <= MAX_TARGET_CLASSES
     )
-    bias_report["notes"] = []
     if target_column and target_column in data.columns and not target_is_categorical:
         bias_report["notes"].append(
             f"The outcome column '{target_column}' has more than {MAX_TARGET_CLASSES} distinct values, "
@@ -130,8 +206,9 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                 value_counts = data[attr].value_counts()
                 proportions = data[attr].value_counts(normalize=True)
 
+                threshold = _rare_threshold(len(proportions))
                 underrepresented = {
-                    str(k): float(v) for k, v in proportions.items() if v < UNDERREPRESENTED_SHARE
+                    str(k): float(v) for k, v in proportions.items() if v < threshold
                 }
                 bias_report["representation_bias"][attr] = {
                     "counts": {str(k): int(v) for k, v in value_counts.items()},
@@ -140,15 +217,18 @@ def statistical_method(data, target_column=None, sensitive_attributes=None, nume
                     if proportions.min() > 0
                     else float("inf"),
                     "underrepresented_groups": underrepresented,
+                    "rare_threshold": threshold,
+                    "missing": int(data[attr].isna().sum()),
                 }
 
                 # Flag underrepresentation, naming the groups
                 if underrepresented:
-                    groups = ", ".join(
-                        f"{g} ({share:.1%})" for g, share in sorted(underrepresented.items(), key=lambda kv: kv[1])
-                    )
+                    ranked = sorted(underrepresented.items(), key=lambda kv: kv[1])
+                    groups = ", ".join(f"{g} ({share:.1%})" for g, share in ranked[:8])
+                    if len(ranked) > 8:
+                        groups += f" and {len(ranked) - 8} more"
                     bias_report["detected_issues"].append(
-                        f"UNDERREPRESENTATION: In '{attr}', these groups are under 10% of the data: {groups}"
+                        f"UNDERREPRESENTATION: In '{attr}', these groups are under {threshold * 100:.3g}% of the data: {groups}"
                     )
 
     # 4. Correlation Bias (between sensitive attributes and target)

@@ -25,6 +25,8 @@ export type AnalysisResult = {
       proportions: { [key: string]: number };
       representation_ratio: number;
       underrepresented_groups?: { [group: string]: number };
+      rare_threshold?: number;
+      missing?: number;
     };
   };
   correlation_bias: {

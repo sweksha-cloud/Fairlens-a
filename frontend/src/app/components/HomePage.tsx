@@ -46,7 +46,7 @@ const STEPS = [
 ];
 
 const CHECKS = [
-  { title: "Rare groups", body: "Flags any group that makes up under 10% of the rows, by name." },
+  { title: "Rare groups", body: "Names any group too small for a model to learn from: under 10% of rows, or less when there are many groups." },
   { title: "Outcome gaps", body: "Compares outcome rates between groups (e.g. 39% vs 9%) and how strong the link is." },
   { title: "Lopsided outcomes", body: "Warns when one outcome far outnumbers the others." },
   { title: "Extreme values", body: "Spots numeric columns skewed by a few extreme values." },

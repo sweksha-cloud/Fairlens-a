@@ -62,7 +62,7 @@ function buildFindings(result: AnalysisResult): Finding[] {
     out.push({
       tone: 'warn',
       title: `Some ${attr.replace(/_/g, ' ')} groups are rare`,
-      meaning: `${small.map(([g, v]) => `${g} (${pct(v)})`).join(', ')} each make up under 10% of rows, so a model will see few examples of them and may perform worse for them.`,
+      meaning: `${small.map(([g, v]) => `${g} (${pct(v)})`).join(', ')} each make up under ${+((d.rare_threshold ?? 0.1) * 100).toFixed(1)}% of rows, so a model will see few examples of them and may perform worse for them.`,
       action: 'Collect more data for these groups if you can, and report model accuracy separately for them.',
     });
   }
@@ -359,7 +359,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
             Representation Bias Analysis
           </h2>
           <p className="mb-8 font-ui text-sm text-black/70 sm:text-base">
-            How many rows each group has. Groups under 10% are shown in red: a model sees few examples of
+            How many rows each group has. Rare groups (under 10% of rows, or less when there are many groups) are shown in red: a model sees few examples of
             them, so it tends to be less accurate for them. The ratio compares the largest group to the
             smallest.
           </p>
@@ -391,7 +391,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
               <div className="grid gap-8 lg:grid-cols-2">
                 <div>
                   <h4 className="mb-4 font-ui font-semibold text-black">Distribution by Count</h4>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={Math.max(300, Object.keys(data.counts).length * 22)}>
                     <BarChart
                       data={Object.entries(data.counts)
                         .sort((a, b) => b[1] - a[1])
@@ -400,7 +400,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
                     >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
-                      <YAxis dataKey="label" type="category" width={110} />
+                      <YAxis dataKey="label" type="category" width={110} interval={0} />
                       <Tooltip contentStyle={{ backgroundColor: 'white', border: '2px solid #3CE6DD' }} />
                       <Bar dataKey="value" name="Count" radius={[0, 8, 8, 0]}>
                         {Object.entries(data.counts).map((_, index) => (
@@ -418,7 +418,7 @@ export default function AnalysisPage({ onNavigate, result }: AnalysisPageProps) 
                       .sort((a, b) => b[1] - a[1])
                       .map(([label, proportion], index) => {
                         const percentage = proportion * 100;
-                        const isUnderrepresented = percentage < 10;
+                        const isUnderrepresented = proportion < (data.rare_threshold ?? 0.1);
 
                         return (
                           <div key={label}>
