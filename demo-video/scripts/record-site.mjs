@@ -13,8 +13,9 @@ import { join } from "node:path";
 const SITE = process.env.FAIRLENS_URL ?? "https://fairlens-a.vercel.app/";
 const CSV = process.env.ADULT_CSV ?? `${process.env.HOME}/Downloads/adult-census-income.csv`;
 const CHROME = process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const VIEW = { width: 1296, height: 685 }; // the page, at 1.25x so the text reads at 1080p...
-const SIZE = { width: 1620, height: 856 }; // ...in the video's 1620-wide browser frame
+// The page at its normal size, so whole report cards and charts fit in the video's browser frame.
+const VIEW = { width: 1620, height: 856 };
+const SIZE = VIEW;
 const here = new URL("..", import.meta.url).pathname;
 
 // A visible cursor: Playwright's recording does not draw the real one.
@@ -56,7 +57,7 @@ await page.goto(SITE);
 await page.waitForLoadState("networkidle");
 await page.waitForTimeout(300);
 const start = at(); // everything before this is a blank page loading; trimmed off below
-await page.mouse.move(648, 260);
+await page.mouse.move(810, 330);
 await page.waitForTimeout(1600); // the hero, with the RCC banner
 
 const getStarted = page.getByRole("button", { name: /Get Started/ });
@@ -89,21 +90,23 @@ await moveTo(analyze);
 await page.waitForTimeout(250);
 const analyzeAt = at();
 await analyze.click();
-await page.getByText("Statistical Bias Analysis Report").waitFor({ timeout: 60000 });
+await page.getByRole("heading", { name: "Bias Report" }).waitFor({ timeout: 60000 });
 const reportAt = at();
-await page.mouse.move(1240, 110, { steps: 10 });
-await page.waitForTimeout(1600); // rows, issues, severity
+await page.mouse.move(1560, 140, { steps: 10 });
+await page.waitForTimeout(2600); // rows, issues, severity, and the start of the summary
 
 await smoothScrollTo(page.locator("h2", { hasText: "What this means" }), "start");
 const summaryAt = at();
-await page.waitForTimeout(2600);
-await page.mouse.wheel(0, 420);
-await page.waitForTimeout(2200);
+await page.waitForTimeout(3400);
 
-const sexCard = page.locator("div.border-2", { has: page.locator("h3", { hasText: /^sex$/ }) }).first();
-await smoothScrollTo(sexCard, "center");
+// The outcome-rate charts: age (grouped into ranges automatically), then sex.
+const card = (name) => page.locator("div.border-2", { has: page.locator("h3", { hasText: new RegExp(`^${name}$`) }) }).first();
+await smoothScrollTo(card("age"), "center");
+const ageAt = at();
+await page.waitForTimeout(3200);
+await smoothScrollTo(card("sex"), "center");
 const sexAt = at();
-await page.waitForTimeout(2400);
+await page.waitForTimeout(3200);
 const end = at();
 
 await context.close();
@@ -116,7 +119,7 @@ execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", String(start), "-i", 
 const rel = (t) => +(t - start).toFixed(2);
 const timing = {
   uploadAt: rel(uploadAt), fileAt: rel(fileAt), columnsAt: rel(columnsAt), analyzeAt: rel(analyzeAt),
-  reportAt: rel(reportAt), summaryAt: rel(summaryAt), sexAt: rel(sexAt), durationSec: rel(end),
+  reportAt: rel(reportAt), summaryAt: rel(summaryAt), ageAt: rel(ageAt), sexAt: rel(sexAt), durationSec: rel(end),
 };
 writeFileSync(join(here, "src", "data", "site-timing.json"), JSON.stringify(timing, null, 2) + "\n");
 console.log("recorded", out, timing);

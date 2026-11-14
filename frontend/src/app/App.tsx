@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Navigation, { type Page } from './components/Navigation';
 import HomePage from './components/HomePage';
 import UploadPage from './components/UploadPage';
@@ -54,6 +54,11 @@ export type AnalysisResult = {
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('home');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+
+  // Each page starts at the top, like a normal page load (otherwise the report opens mid-page).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
 
   const handleFileAnalyzed = (result: AnalysisResult) => {
     setAnalysisResult(result);
