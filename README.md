@@ -1,8 +1,8 @@
 # FairLens
 
-**Check a dataset for bias before you train a model on it.**
+> **Made for the Responsible Computing Club (RCC) at San José State University.**
 
-Made for the Responsible Computing Club at SJSU.
+**Check a dataset for bias before you train a model on it.**
 
 **Try it: [fairlens-a.vercel.app](https://fairlens-a.vercel.app)** (no sign-up; nothing you upload is stored)
 
