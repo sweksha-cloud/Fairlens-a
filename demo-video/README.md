@@ -1,6 +1,6 @@
 # Demo video
 
-A 32-second video of FairLens checking the UCI Adult census data (32,561 people) on the live site, built
+A 37-second video of FairLens checking the UCI Adult census data (32,561 people) on the live site, built
 with [Remotion](https://www.remotion.dev) (React components rendered to MP4). 1920x1080, 30 fps,
 captions, no audio, played at 1.25x speed.
 

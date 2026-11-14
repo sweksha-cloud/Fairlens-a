@@ -7,8 +7,9 @@ import report from "../data/report.json";
 
 // public/site.mp4 is the live site (fairlens-a.vercel.app), recorded by scripts/record-site.mjs.
 // site-timing.json holds when each step happened in that recording.
-const t = timing as Record<"uploadAt" | "fileAt" | "columnsAt" | "analyzeAt" | "reportAt" | "summaryAt" | "sexAt" | "durationSec", number>;
+const t = timing as Record<"uploadAt" | "fileAt" | "columnsAt" | "analyzeAt" | "reportAt" | "outcomesAt" | "sizesAt" | "durationSec", number>;
 const rate = (g: string) => Math.round(100 * report.sex.rates.find((r) => r.group === g)!.rate);
+const ages = report.age.rates.map((r) => Math.round(100 * r.rate));
 const seconds = Math.max(1, Math.round(t.reportAt - t.analyzeAt));
 
 export const Site: React.FC = () => (
@@ -23,9 +24,10 @@ export const Site: React.FC = () => (
     <Caption text="The live site: fairlens-a.vercel.app" from={sec(0.3)} to={sec(t.uploadAt) - 2} />
     <Caption text="Upload the CSV" from={sec(t.uploadAt)} to={sec(t.columnsAt) - 2} />
     <Caption text="It picks the outcome (income) and the columns about people" from={sec(t.columnsAt)} to={sec(t.analyzeAt) - 2} />
-    <Caption text={`32,561 rows checked in about ${seconds} seconds`} from={sec(t.analyzeAt)} to={sec(t.summaryAt) - 2} />
-    <Caption text="Plain English: what each finding means, and what to do" from={sec(t.summaryAt)} to={sec(t.sexAt) - 2} />
-    <Caption text={`Over $50K: ${rate("Male")}% of men vs ${rate("Female")}% of women`} from={sec(t.sexAt)} />
+    <Caption text={`32,561 rows checked in about ${seconds} seconds`} from={sec(t.analyzeAt)} to={sec(t.reportAt) + 30} />
+    <Caption text="Plain English: what each finding means, and what to do" from={sec(t.reportAt) + 30} to={sec(t.outcomesAt) - 2} />
+    <Caption text={`Over $50K: ${rate("Male")}% of men vs ${rate("Female")}% of women; ${Math.min(...ages)}% to ${Math.max(...ages)}% by age`} from={sec(t.outcomesAt)} to={sec(t.sizesAt) - 2} />
+    <Caption text="Which groups are rare, and which rows are unknown" from={sec(t.sizesAt)} />
     <TechTag label="React · FastAPI · pandas · SciPy · Vercel" />
   </SceneFrame>
 );

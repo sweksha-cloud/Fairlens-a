@@ -13,7 +13,7 @@ export const TRANSITION = 12;
 export const SCENES = {
   title: sec(3.2),
   dataset: sec(5.5),
-  site: Math.min(sec(24), sec(timing.durationSec)), // as long as the recording, capped at 24 s
+  site: Math.min(sec(30), sec(timing.durationSec)), // as long as the recording, capped at 30 s
   findings: sec(6.5),
   end: sec(4.5),
 };

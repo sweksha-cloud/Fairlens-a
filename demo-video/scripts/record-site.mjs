@@ -93,20 +93,15 @@ await analyze.click();
 await page.getByRole("heading", { name: "Bias Report" }).waitFor({ timeout: 60000 });
 const reportAt = at();
 await page.mouse.move(1560, 140, { steps: 10 });
-await page.waitForTimeout(2600); // rows, issues, severity, and the start of the summary
+await page.waitForTimeout(3600); // rows, issues, severity, and the plain-English summary
 
-await smoothScrollTo(page.locator("h2", { hasText: "What this means" }), "start");
-const summaryAt = at();
+// The outcome-rate charts, then group sizes.
+await smoothScrollTo(page.locator("h2", { hasText: "Outcome rate by group" }), "start");
+const outcomesAt = at();
+await page.waitForTimeout(4600);
+await smoothScrollTo(page.locator("h2", { hasText: "Group sizes" }), "start");
+const sizesAt = at();
 await page.waitForTimeout(3400);
-
-// The outcome-rate charts: age (grouped into ranges automatically), then sex.
-const card = (name) => page.locator("div.border-2", { has: page.locator("h3", { hasText: new RegExp(`^${name}$`) }) }).first();
-await smoothScrollTo(card("age"), "center");
-const ageAt = at();
-await page.waitForTimeout(3200);
-await smoothScrollTo(card("sex"), "center");
-const sexAt = at();
-await page.waitForTimeout(3200);
 const end = at();
 
 await context.close();
@@ -119,7 +114,7 @@ execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", String(start), "-i", 
 const rel = (t) => +(t - start).toFixed(2);
 const timing = {
   uploadAt: rel(uploadAt), fileAt: rel(fileAt), columnsAt: rel(columnsAt), analyzeAt: rel(analyzeAt),
-  reportAt: rel(reportAt), summaryAt: rel(summaryAt), ageAt: rel(ageAt), sexAt: rel(sexAt), durationSec: rel(end),
+  reportAt: rel(reportAt), outcomesAt: rel(outcomesAt), sizesAt: rel(sizesAt), durationSec: rel(end),
 };
 writeFileSync(join(here, "src", "data", "site-timing.json"), JSON.stringify(timing, null, 2) + "\n");
 console.log("recorded", out, timing);
