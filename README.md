@@ -6,10 +6,7 @@
 
 **Try it: [fairlens-a.vercel.app](https://fairlens-a.vercel.app)** (no sign-up; nothing you upload is stored)
 
-**▶ [Watch the 45-second demo](docs/fairlens-demo.webp)**: FairLens checking the UCI Adult census data
-(32,561 people) on the live site.
-
-<a href="docs/fairlens-demo.webp"><img src="docs/fairlens-demo.webp" alt="FairLens demo: uploading the Adult census data and reading the bias report" width="800"></a>
+**▶ [Watch the demo](#demo)**
 
 Upload a CSV, tell FairLens which column is the outcome (for example *approved* or *hired*) and which
 columns describe people (race, sex, age group…), and it reports, in plain English:
@@ -24,6 +21,13 @@ It answers *"is this data safe to train on?"*, not *"is my model fair?"*. No mod
 FairLens is a Responsible Computing Club (RCC) project at San José State University, built for people
 on campus to use: students checking datasets for class projects, researchers vetting data before a
 study, or anyone at SJSU who wants a quick fairness check before training a model.
+
+## Demo
+
+FairLens checking the UCI Adult census data (32,561 people) on the live site: upload, the columns it
+picks by itself, the plain-English report, and the outcome gaps it finds.
+
+<a href="docs/fairlens-demo.webp"><img src="docs/fairlens-demo.webp" alt="FairLens demo: uploading the Adult census data and reading the bias report" width="800"></a>
 
 ---
 
