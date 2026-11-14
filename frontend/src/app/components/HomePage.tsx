@@ -116,7 +116,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <span className="absolute inset-0 animate-ping rounded-full bg-[#3CE6DD]/60" aria-hidden />
               <PlayIcon className="relative ml-0.5 size-4" />
             </span>
-            Watch the 37-second demo
+            Watch the 45-second demo
           </button>
         </div>
         <p className="mt-5 font-body text-sm text-white/60">
@@ -127,7 +127,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
       {/* Demo video */}
       <section id="demo" className="relative z-10 mx-auto max-w-5xl scroll-mt-20 px-4 pb-8 pt-4">
         <h2 className="text-center font-display text-[clamp(1.75rem,4vw,3rem)] font-bold text-white">
-          See it in 37 seconds
+          See it in 45 seconds
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-center font-body text-lg text-white/75">
           FairLens checking 32,561 real census records, start to finish, on this site.
@@ -154,7 +154,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
                 <PlayIcon className="relative ml-1 size-9 sm:size-12" />
               </span>
               <span className="absolute bottom-5 rounded-full bg-black/70 px-4 py-1.5 font-ui text-sm font-semibold text-white sm:text-base">
-                ▶ Watch the demo · 0:37
+                ▶ Watch the demo · 0:45
               </span>
             </button>
           )}
