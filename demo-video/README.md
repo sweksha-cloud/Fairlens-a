@@ -30,11 +30,18 @@ npm run render    # writes out/fairlens-demo.mp4 (and the 1x cut, out/fairlens-d
 ```
 
 `npm run studio` opens Remotion's preview to scrub through the video while editing. The renders in `out/`
-and the recording are gitignored. The site serves `frontend/public/demo/fairlens-demo.mp4`, and the main
-README shows `docs/fairlens-demo.gif`, so after a new render:
+and the recording are gitignored. Two copies are published:
+
+- `frontend/public/demo/fairlens-demo.mp4`: the video the site plays.
+- `docs/fairlens-demo.webp`: an animated WebP of it, which GitHub shows inline (an MP4 there is only a
+  download). The README and resume link to this file, so keep the name when you replace it and the links
+  keep working.
+
+After a new render (needs [libwebp](https://developers.google.com/speed/webp): `brew install webp`), using an
+empty frames folder:
 
 ```bash
 cp out/fairlens-demo.mp4 ../frontend/public/demo/fairlens-demo.mp4
-mkdir -p /tmp/fl-frames && ffmpeg -i out/fairlens-demo.mp4 -vf "fps=10,scale=800:-1:flags=lanczos" /tmp/fl-frames/%04d.png
-gifski --fps 10 --width 800 --quality 70 -o ../docs/fairlens-demo.gif /tmp/fl-frames/*.png
+mkdir -p /tmp/fl-frames && ffmpeg -i out/fairlens-demo.mp4 -vf "fps=12,scale=1100:-1:flags=lanczos" /tmp/fl-frames/%04d.png
+img2webp -loop 0 -lossy -q 70 -m 4 -d 83 /tmp/fl-frames/*.png -o ../docs/fairlens-demo.webp
 ```

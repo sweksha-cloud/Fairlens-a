@@ -6,10 +6,10 @@
 
 **Try it: [fairlens-a.vercel.app](https://fairlens-a.vercel.app)** (no sign-up; nothing you upload is stored)
 
-**▶ [Watch the 45-second demo](https://fairlens-a.vercel.app/demo/fairlens-demo.mp4)**: FairLens checking the UCI Adult census data
+**▶ [Watch the 45-second demo](docs/fairlens-demo.webp)**: FairLens checking the UCI Adult census data
 (32,561 people) on the live site.
 
-<a href="https://fairlens-a.vercel.app/demo/fairlens-demo.mp4"><img src="docs/fairlens-demo.gif" alt="FairLens demo: uploading the Adult census data and reading the bias report" width="800"></a>
+<a href="docs/fairlens-demo.webp"><img src="docs/fairlens-demo.webp" alt="FairLens demo: uploading the Adult census data and reading the bias report" width="800"></a>
 
 Upload a CSV, tell FairLens which column is the outcome (for example *approved* or *hired*) and which
 columns describe people (race, sex, age group…), and it reports, in plain English:
