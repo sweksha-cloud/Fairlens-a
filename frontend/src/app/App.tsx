@@ -88,6 +88,17 @@ export default function App() {
             </div>
           ))}
       </main>
+      <footer className="border-t border-white/10 px-4 py-6 text-center font-body text-sm text-white/60">
+        Made for the Responsible Computing Club at SJSU ·{' '}
+        <a
+          href="https://github.com/sweksha-cloud/Fairlens-a"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[#3CE6DD] hover:underline"
+        >
+          Code on GitHub
+        </a>
+      </footer>
     </div>
   );
 }

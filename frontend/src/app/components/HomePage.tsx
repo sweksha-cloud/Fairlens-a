@@ -70,6 +70,9 @@ export default function HomePage({ onNavigate }: HomePageProps) {
 
       {/* Hero */}
       <section className="relative z-10 mx-auto flex min-h-[72vh] max-w-5xl flex-col items-center justify-center px-4 py-16 text-center">
+        <p className="mb-6 whitespace-nowrap rounded-full border border-[#3CE6DD]/40 bg-black/40 px-3 py-1.5 font-body text-xs text-[#3CE6DD] sm:px-4 sm:text-base">
+          Made for the Responsible Computing Club at SJSU
+        </p>
         <h1 className="font-display text-[clamp(2.5rem,8vw,6.5rem)] font-bold leading-[1.05] text-white [text-shadow:0_0_36px_rgba(255,255,255,0.45),0_0_90px_rgba(60,230,221,0.4)]">
           RCC&nbsp;FairLens&#8209;A
           <br />
