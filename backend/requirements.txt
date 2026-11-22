@@ -9,6 +9,6 @@ scipy>=1.13
 scikit-learn>=1.5
 
 matplotlib>=3.8
-seaborn>=0.13
+seaborn>=0.13.2
 
 requests>=2.31
